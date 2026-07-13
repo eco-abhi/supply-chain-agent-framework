@@ -1,0 +1,13 @@
+[project]
+name = "scaf"
+version = "0.1.0"
+description = "Supply Chain Agent Framework: dynamic protocol and governance-mode selection for multi-agent systems"
+requires-python = ">=3.10"
+authors = [
+    { name = "Abhishek Pandey" },
+]
+license = { text = "Apache-2.0" }
+readme = "README.md"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
