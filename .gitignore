@@ -10,3 +10,9 @@ venv/
 *.ipynb_checkpoints/
 dist/
 build/
+
+# Olist CSVs (see data/README.md); keep the download instructions
+data/*.csv
+!data/README.md
+results/
+figures/
