@@ -1,8 +1,10 @@
-# Olist Brazilian E-Commerce data
+# Evaluation datasets
+
+## Olist Brazilian E-Commerce
 
 Place the official Kaggle CSVs in this directory (`./data/`).
 
-## Download
+### Download
 
 1. Go to [olistbr/brazilian-ecommerce](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce)
 2. Download and unzip into `./data/` so the following files exist:
@@ -26,3 +28,9 @@ kaggle datasets download -d olistbr/brazilian-ecommerce -p data --unzip
 ```
 
 Runtime code assumes these files are already present (no network access at evaluation time).
+
+## DataCo Smart Supply Chain
+
+Second-dataset replication (§5.9). Place
+`DataCoSupplyChainDataset.csv` under [`dataco/`](dataco/) — see
+[`dataco/README.md`](dataco/README.md).

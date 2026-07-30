@@ -22,6 +22,9 @@ for Multi-Agent Systems."*
 | Multi-party header caching | `scaf/multiparty.py` | Self-describing headers sent once per participant; a `RemoteParticipant` decodes wire messages with no shared memory |
 | Agents | `scaf/agents/` | Demand, supplier risk, finance agents plus the central orchestrator |
 | Evaluation experiments | `scaf/experiments.py` | Threshold sensitivity, learned-baseline comparison, adversarial injection, retraining ablation |
+| Olist evaluation (paper §5) | `src/` | Real-data risk model, rankers, frontier, adversarial, retraining (`run_all.py`) |
+| DataCo replication (§5.9) | `src/dataco/` | Second-dataset spine only (risk + rankers + coverage_adverse) |
+| Expected-cost (§5.9) | `src/experiments/expected_cost.py` | Cost-only vs dynamic min expected cost vs ρ |
 
 ## Quick start
 
@@ -40,6 +43,21 @@ python3 -m scaf.multiparty
 
 # run tests
 python3 -m pytest tests/ -q
+```
+
+## Paper evaluation (Olist + DataCo)
+
+Requires a venv with `requirements.txt` and the datasets under `data/`
+(see [`data/README.md`](data/README.md) and [`data/dataco/README.md`](data/dataco/README.md)).
+Outputs land in `results/` and `figures/` (gitignored); narrative numbers in
+[`RESULTS.md`](RESULTS.md) and [`RESULTS_DATACO.md`](RESULTS_DATACO.md).
+
+```bash
+python -m src.risk_model                  # locked Olist risk model
+python run_all.py                         # exp1–exp5
+python -m src.experiments.protocol_distribution
+python -m src.dataco.replicate            # DataCo spine replication
+python -m src.experiments.expected_cost   # §5.9 expected-cost curves
 ```
 
 ## How routing works

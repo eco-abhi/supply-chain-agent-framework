@@ -127,6 +127,12 @@ Real base-rate drift (train 9.5% → test 6.35%). Calendar every 2000 decisions 
 | `results/exp3.csv` | Learned vs router (+ interaction) |
 | `results/exp4.csv` | Per-seed adversarial detections |
 | `results/exp5.csv` | Per-seed recovery metrics |
+| `results/protocol_distribution.csv` | Test-split HTTP / MCP / A2A shares |
+| `results/expected_cost.csv` | §5.9 min expected cost vs ρ (Olist + DataCo) |
 | `figures/coverage_three_panel.png` | Section 5.3 three-panel |
 | `figures/frontier.png` | Section 5.4 |
 | `figures/recovery_curves.png` | Section 5.7 |
+| `figures/expected_cost_olist.png` | Section 5.9 expected-cost (Olist) |
+| `figures/expected_cost_dataco.png` | Section 5.9 expected-cost (DataCo) |
+
+DataCo spine replication (side-by-side numbers): see [`RESULTS_DATACO.md`](RESULTS_DATACO.md).

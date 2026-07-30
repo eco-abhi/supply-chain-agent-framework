@@ -11,8 +11,9 @@ venv/
 dist/
 build/
 
-# Olist CSVs (see data/README.md); keep the download instructions
-data/*.csv
+# Dataset CSVs (see data/README.md, data/dataco/README.md); keep instructions
+data/**/*.csv
 !data/README.md
+!data/**/README.md
 results/
 figures/
