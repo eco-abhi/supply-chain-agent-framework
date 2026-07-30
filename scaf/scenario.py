@@ -12,7 +12,6 @@ from .agents.core import DemandAgent, FinanceAgent, Orchestrator, SupplierRiskAg
 from .guardrails import GuardrailEngine
 from .models import DecisionContext, GovernanceMode
 from .router import GovernanceRouter, RouterConfig
-from .scql import Chain
 
 
 def run_stockout_scenario(seed: int = 42, order_cost: float = 12_000.0,
@@ -32,22 +31,16 @@ def run_stockout_scenario(seed: int = 42, order_cost: float = 12_000.0,
         for _ in range(60):
             risk_agent.monitor.observe(min(1.0, max(0.0, rng.gauss(0.3 + inject_drift, 0.1))))
 
-    chain = Chain("c1")
-    chain.define("P1", "Part", id=4471, name="BatteryModuleHousing")
-    chain.define("S1", "Supplier", id="ABC001", name="ABCCorp")
-
     ctx = DecisionContext(description="stockout response P1", cost_usd=order_cost)
 
     # 1. demand agent checks inventory (MCP)
-    chain.emit("MCP", "get", "P1.stock")
     inv = demand.check_inventory("P1", ctx)
     if not inv["short"]:
         if verbose:
             print("No shortage detected; nothing to do.")
-        return guardrails, chain, None
+        return guardrails, None
 
     # 2. demand agent asks supplier risk agent (A2A)
-    chain.emit("A2A", "ask", "supplier_risk", "S1 risk?")
     risk = risk_agent.assess("S1", ctx)
     guardrails.validate_a2a_message("supplier_risk", {"risk": risk})
     ctx.risk_score = risk
@@ -62,17 +55,14 @@ def run_stockout_scenario(seed: int = 42, order_cost: float = 12_000.0,
 
     # 4. execute per governance mode
     if routing.governance == GovernanceMode.DECENTRALIZED:
-        chain.emit("A2A", "tell", "demand", f"S1 risk:{risk:.2f} -> reorder P1")
         approved = finance.approve(ctx.cost_usd, ctx)
     else:
-        chain.emit("A2A", "ask", "orchestrator", f"escalate P1 reorder ${order_cost:,.0f}")
         approved = orchestrator.handle(ctx, routing.governance, ctx.cost_usd)
 
     if verbose:
         print(f"Order {'placed' if approved else 'blocked'}.")
-        print(f"\nSCQL tokens: {chain.scql_tokens()}  |  JSON-equivalent: {chain.json_equivalent_tokens()}")
         print(f"\nAudit trail for decision {ctx.decision_id}:")
         for rec in guardrails.explain(ctx.decision_id):
             print(f"  [{rec.actor}] {rec.action}: {rec.rationale}")
 
-    return guardrails, chain, routing
+    return guardrails, routing

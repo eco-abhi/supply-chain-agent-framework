@@ -1,116 +1,94 @@
 # SCAF: Supply Chain Agent Framework
 
-A reference implementation of a **governed orchestration framework** for
-autonomous supply chain systems. The core idea: the choice of communication
-protocol (HTTP / MCP / A2A) and the choice of governance mode (centralized
-vs decentralized) shouldn't be fixed at design time. A runtime router should
-make both choices together, per decision, based on the risk and cost of that
-specific decision.
+Companion code for *"A Governed Orchestration Framework for Autonomous
+Supply Chains: Dynamic Protocol and Governance-Mode Selection for
+Multi-Agent Systems"* (IJPE, under review).
 
-Companion code for the paper *"A Governed Orchestration Framework for
-Autonomous Supply Chains: Dynamic Protocol and Governance-Mode Selection
-for Multi-Agent Systems."*
+A runtime **governance router** chooses protocol (HTTP / MCP / A2A) and
+governance mode (decentralized / centralized / human approval) per
+decision from cost, risk, complexity, and drift — rather than fixing
+those choices at design time.
 
-## The components
+The paper evaluation uses real order data (Olist, DataCo). The `scaf/`
+package is a small reference implementation of the router, guardrails,
+and agents used in the worked example.
 
-| Component | Module | What it does |
+## Paper evaluation (primary)
+
+| Piece | Path | What it does |
 |---|---|---|
-| Governance router | `scaf/router.py` | Picks (protocol, governance mode) per decision from risk, cost, complexity, and drift signals |
-| Guardrails | `scaf/guardrails.py` | Policy-as-code: hard PO ceilings, per-agent tool scoping, A2A message validation, mandatory audit logging |
-| Drift monitor | `scaf/drift.py` | PSI-based drift detection plus negotiation-disagreement as a second retraining trigger |
-| SCQL notation | `scaf/scql.py` | Compact cross-protocol query notation: define entities once, reference by alias, cut token cost |
-| Multi-party header caching | `scaf/multiparty.py` | Self-describing headers sent once per participant; a `RemoteParticipant` decodes wire messages with no shared memory |
-| Agents | `scaf/agents/` | Demand, supplier risk, finance agents plus the central orchestrator |
-| Evaluation experiments | `scaf/experiments.py` | Threshold sensitivity, learned-baseline comparison, adversarial injection, retraining ablation |
-| Olist evaluation (paper §5) | `src/` | Real-data risk model, rankers, frontier, adversarial, retraining (`run_all.py`) |
-| DataCo replication (§5.9) | `src/dataco/` | Second-dataset spine only (risk + rankers + coverage_adverse) |
-| Expected-cost (§5.9) | `src/experiments/expected_cost.py` | Cost-only vs dynamic min expected cost vs ρ |
+| Olist pipeline (§5) | `src/` + `run_all.py` | Risk model, rankers, frontier, learned baseline, adversarial, retraining |
+| Protocol shares (§5.4b) | `src/experiments/protocol_distribution.py` | HTTP / MCP / A2A on the locked test split |
+| DataCo replication (§5.9) | `src/dataco/` | Spine only: risk + rankers + `coverage_adverse` |
+| Expected cost (§5.9) | `src/experiments/expected_cost.py` | Cost-only vs dynamic min expected cost vs ρ |
 
-## Quick start
+Narrative numbers: [`RESULTS.md`](RESULTS.md) (Olist) and
+[`RESULTS_DATACO.md`](RESULTS_DATACO.md) (DataCo side-by-side).
+CSV/figures land in `results/` and `figures/` (gitignored).
+
+### Setup
 
 ```bash
-# run the worked example (stockout scenario, three governance paths)
-python3 examples/demo.py
-
-# run the three-way benchmark (centralized vs decentralized vs dynamic)
-python3 -m scaf.benchmark
-
-# run the paper's additional evaluation experiments (Section 5.2-5.5)
-python3 -m scaf.experiments
-
-# run the multi-party header-caching benchmark (Section 5.6)
-python3 -m scaf.multiparty
-
-# run tests
-python3 -m pytest tests/ -q
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
 ```
 
-## Paper evaluation (Olist + DataCo)
+Datasets (CSVs are not in git): see [`data/README.md`](data/README.md)
+and [`data/dataco/README.md`](data/dataco/README.md).
 
-Requires a venv with `requirements.txt` and the datasets under `data/`
-(see [`data/README.md`](data/README.md) and [`data/dataco/README.md`](data/dataco/README.md)).
-Outputs land in `results/` and `figures/` (gitignored); narrative numbers in
-[`RESULTS.md`](RESULTS.md) and [`RESULTS_DATACO.md`](RESULTS_DATACO.md).
+### Run
 
 ```bash
-python -m src.risk_model                  # locked Olist risk model
-python run_all.py                         # exp1–exp5
+python -m src.risk_model                       # locked Olist risk model
+python run_all.py                              # exp1–exp5
 python -m src.experiments.protocol_distribution
-python -m src.dataco.replicate            # DataCo spine replication
-python -m src.experiments.expected_cost   # §5.9 expected-cost curves
+python -m src.dataco.replicate                 # DataCo spine
+python -m src.experiments.expected_cost        # §5.9 expected-cost curves
 ```
 
-## How routing works
+## Reference framework (`scaf/`)
+
+| Component | Module | Role |
+|---|---|---|
+| Governance router | `scaf/router.py` | Protocol + governance mode from cost, risk, complexity, drift |
+| Guardrails | `scaf/guardrails.py` | PO ceilings, tool scoping, A2A validation, audit log |
+| Drift monitor | `scaf/drift.py` | PSI + negotiation-disagreement triggers |
+| Agents | `scaf/agents/` | Demand, supplier risk, finance, orchestrator (stubs) |
+| Synthetic demos | `scaf/benchmark.py`, `scaf/experiments.py` | Toy latency / coverage checks (not the paper tables) |
+
+```bash
+python examples/demo.py          # worked example, three governance paths
+python -m scaf.benchmark         # synthetic centralized vs decentralized vs dynamic
+python -m pytest tests/ -q
+```
+
+### How routing works
 
 ```python
 from scaf import GovernanceRouter, DecisionContext
 
 router = GovernanceRouter()
 
-# routine reorder: cheap, low risk -> decentralized A2A, no escalation
+# routine reorder: cheap, low risk -> decentralized A2A
 ctx = DecisionContext(cost_usd=12_000, risk_score=0.2, complexity=2)
 router.route(ctx).governance  # GovernanceMode.DECENTRALIZED
 
-# same decision but the risk model is drifting -> router gets cautious
+# same decision, drifting risk model -> escalate
 ctx = DecisionContext(cost_usd=12_000, risk_score=0.5, complexity=2,
                       model_drift_flag=True)
 router.route(ctx).governance  # GovernanceMode.CENTRALIZED
 
-# big order -> human sign-off required
+# large order -> human sign-off
 ctx = DecisionContext(cost_usd=150_000, risk_score=0.2, complexity=2)
 router.route(ctx).governance  # GovernanceMode.HUMAN_APPROVAL
 ```
 
-## Benchmark results (1,000 simulated decisions)
-
-| Config | Mean latency | Governance coverage | Autonomy | Token cost |
-|---|---|---|---|---|
-| Static centralized | 7.04 | 100% | 0% | baseline |
-| Static decentralized | 1.00 | 0% | 100% | baseline |
-| **Dynamic router** | **5.54** | **100%** | **100%** | baseline |
-| SCQL vs verbose JSON | | | | **~5.6x fewer tokens** |
-
-Governance coverage = share of high-stakes decisions (cost >= $25k or
-risk >= 0.6) that received centralized oversight. Autonomy = share of
-routine decisions that resolved without escalation. Only the dynamic
-router achieves both at once. Latency units are simulated and relative.
-
-## Status and caveats
-
-This is a reference implementation, not production software. The agents
-use stubbed models and simulated data. The latency numbers are relative
-simulation units. Plugging in a real training pipeline (`DriftMonitor.retrain`)
-and real transport (actual MCP servers and A2A agent cards) is the natural
-next step.
-
 ## Citation
-
-Companion code for:
 
 > Pandey, A. *A Governed Orchestration Framework for Autonomous Supply
 > Chains: Dynamic Protocol and Governance-Mode Selection for Multi-Agent
 > Systems.* Submitted to the *International Journal of Production
-> Research*, Special Issue: The Agentic Supply Chain (under review).
+> Economics*, Special Issue: The Agentic Supply Chain (under review).
 
 A full citation with volume/issue/DOI will be added once the paper is
 published.
@@ -118,4 +96,3 @@ published.
 ## License
 
 Apache License 2.0. See [LICENSE](LICENSE).
-

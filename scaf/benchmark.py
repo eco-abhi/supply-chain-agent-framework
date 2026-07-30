@@ -1,11 +1,11 @@
-"""Benchmark harness (Section 5 of the paper, runnable).
+"""Benchmark harness (synthetic demo).
 
 Compares three configurations over N simulated decisions:
   A. static centralized  (everything escalates to the orchestrator)
   B. static decentralized (everything resolves peer-to-peer)
   C. dynamic router       (the framework)
 
-Metrics: mean decision latency (simulated), token cost (SCQL vs JSON),
+Metrics: mean decision latency (simulated),
 governance coverage (share of high-stakes decisions that got oversight),
 and autonomy (share of routine decisions that avoided escalation).
 """
@@ -17,7 +17,6 @@ from dataclasses import dataclass
 
 from .models import DecisionContext, GovernanceMode
 from .router import GovernanceRouter, RouterConfig
-from .scql import Chain
 
 # simulated latency costs (arbitrary units; relative values are what matter)
 LATENCY = {
@@ -36,8 +35,6 @@ class RunResult:
     mean_latency: float
     governance_coverage: float   # high-stakes decisions that received oversight
     autonomy: float              # routine decisions resolved without escalation
-    scql_tokens: int
-    json_tokens: int
 
 
 def simulate_decisions(n: int, seed: int) -> list[DecisionContext]:
@@ -58,28 +55,13 @@ def is_high_stakes(ctx: DecisionContext) -> bool:
     return ctx.cost_usd >= HIGH_STAKES_COST or ctx.risk_score >= HIGH_STAKES_RISK
 
 
-def decision_chain(ctx: DecisionContext) -> Chain:
-    """Build the message chain for one decision, for token accounting."""
-    ch = Chain(ctx.decision_id)
-    ch.define("P1", "Part", id=4471, name="BatteryModuleHousing")
-    ch.define("S1", "Supplier", id="ABC001", name="ABCCorp")
-    ch.emit("MCP", "get", "P1.stock")
-    ch.emit("A2A", "ask", "supplier_risk", "S1 risk?")
-    ch.emit("A2A", "tell", "demand", f"S1 risk:{ctx.risk_score:.2f}")
-    return ch
-
-
 def run_config(name: str, decisions: list[DecisionContext],
                mode: str) -> RunResult:
     router = GovernanceRouter(RouterConfig())
-    latencies, scql_total, json_total = [], 0, 0
+    latencies = []
     hs_total = hs_governed = routine_total = routine_autonomous = 0
 
     for ctx in decisions:
-        ch = decision_chain(ctx)
-        scql_total += ch.scql_tokens()
-        json_total += ch.json_equivalent_tokens()
-
         if mode == "centralized":
             gov = GovernanceMode.HUMAN_APPROVAL if ctx.cost_usd >= 100_000 else GovernanceMode.CENTRALIZED
         elif mode == "decentralized":
@@ -108,8 +90,6 @@ def run_config(name: str, decisions: list[DecisionContext],
         mean_latency=statistics.mean(latencies),
         governance_coverage=hs_governed / hs_total if hs_total else 1.0,
         autonomy=routine_autonomous / routine_total if routine_total else 1.0,
-        scql_tokens=scql_total,
-        json_tokens=json_total,
     )
 
 
@@ -124,7 +104,7 @@ def run_benchmark(n: int = 1000, seed: int = 7) -> list[RunResult]:
 
 if __name__ == "__main__":
     results = run_benchmark()
-    print(f"{'config':<24}{'latency':>9}{'gov cover':>11}{'autonomy':>10}{'SCQL tok':>10}{'JSON tok':>10}")
+    print(f"{'config':<24}{'latency':>9}{'gov cover':>11}{'autonomy':>10}")
     for r in results:
         print(f"{r.name:<24}{r.mean_latency:>9.2f}{r.governance_coverage:>10.0%}"
-              f"{r.autonomy:>10.0%}{r.scql_tokens:>10,}{r.json_tokens:>10,}")
+              f"{r.autonomy:>10.0%}")

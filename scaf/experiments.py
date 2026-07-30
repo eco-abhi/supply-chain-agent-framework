@@ -19,7 +19,7 @@ import random
 import statistics
 from dataclasses import dataclass
 
-from .benchmark import LATENCY, decision_chain, is_high_stakes, simulate_decisions
+from .benchmark import LATENCY, is_high_stakes, simulate_decisions
 from .drift import DriftMonitor
 from .models import DecisionContext, GovernanceMode
 from .router import GovernanceRouter, RouterConfig

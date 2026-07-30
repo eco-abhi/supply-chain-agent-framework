@@ -2,7 +2,7 @@
 import pytest
 
 from scaf import (
-    Chain, DecisionContext, DriftMonitor, GovernanceMode, GovernanceRouter,
+    DecisionContext, DriftMonitor, GovernanceMode, GovernanceRouter,
     GuardrailEngine, GuardrailViolation, Protocol, RouterConfig,
 )
 
@@ -127,16 +127,3 @@ def test_retrain_resets():
     m.retrain()
     assert not m.drifting
     assert m.retrain_count == 1
-
-
-# ---------- scql ----------
-
-def test_scql_cheaper_than_json():
-    ch = Chain("t")
-    ch.define("P1", "Part", id=4471, name="Widget")
-    ch.define("S1", "Supplier", id="X1", name="Acme")
-    ch.emit("MCP", "get", "P1.stock")
-    ch.emit("A2A", "ask", "supplier_risk", "S1 risk?")
-    assert ch.scql_tokens() < ch.json_equivalent_tokens()
-    # meaningful margin, not a rounding artifact
-    assert ch.json_equivalent_tokens() / ch.scql_tokens() > 2

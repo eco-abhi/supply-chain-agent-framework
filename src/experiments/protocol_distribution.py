@@ -1,7 +1,7 @@
 """Section 5.4b — Protocol-selection characterization (descriptive only).
 
 Deterministic complexity → {HTTP, MCP, A2A} on the locked TEST split.
-No scoring, no latency model, no SCQL.
+No scoring and no latency model.
 """
 from __future__ import annotations
 

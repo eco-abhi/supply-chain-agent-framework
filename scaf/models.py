@@ -1,6 +1,6 @@
 """Core data models for the SCAF framework.
 
-Entities, decision contexts, and the enums the router selects between.
+Decision contexts and the enums the router selects between.
 """
 from __future__ import annotations
 
@@ -20,25 +20,6 @@ class GovernanceMode(Enum):
     DECENTRALIZED = "decentralized"   # peer A2A negotiation, autonomous
     CENTRALIZED = "centralized"       # routed through orchestrator
     HUMAN_APPROVAL = "human_approval" # centralized + human sign-off gate
-
-
-@dataclass
-class Entity:
-    """A supply chain entity (Part, Supplier, Order...) registered once
-    per reasoning chain and referenced by alias thereafter (SCQL)."""
-    alias: str
-    entity_type: str
-    fields: dict
-
-    def compact(self) -> str:
-        """Compact SCQL-style serialization: alias|k:v|k:v"""
-        inner = "|".join(f"{k}:{v}" for k, v in self.fields.items())
-        return f"{self.alias}|{inner}"
-
-    def verbose(self) -> str:
-        """Verbose JSON-style serialization (the baseline we benchmark against)."""
-        import json
-        return json.dumps({"alias": self.alias, "type": self.entity_type, **self.fields})
 
 
 @dataclass
